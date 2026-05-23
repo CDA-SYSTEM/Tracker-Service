@@ -1,6 +1,30 @@
+# Entorno
 .env
+.venv/
+venv/
+
+# Python cache
 __pycache__/
 *.pyc
 *.pyo
-.venv/
-venv/
+
+# Testing & linting
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Packaging
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+.DS_Store
