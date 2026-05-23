@@ -1,0 +1,77 @@
+name: Deploy Tracker Service Docker
+
+on:
+  push:
+    branches: [ "main", "feat/config-deploy" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  packages: write
+  contents: read
+
+jobs:
+  deploy-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set repository name to lowercase
+        run: echo "REPO_LC=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ env.REPO_LC }}:latest
+            ghcr.io/${{ env.REPO_LC }}:${{ github.sha }}
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.REMOTE_PORT }}
+          script: |
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            docker pull ghcr.io/${{ env.REPO_LC }}:latest
+
+            docker stop tracker-service || true
+            docker rm tracker-service || true
+
+            docker run -d \
+              --name tracker-service \
+              -p ${{ secrets.TRACKER_PORT }}:5000 \
+              -e FLASK_HOST="0.0.0.0" \
+              -e FLASK_PORT="5000" \
+              -e RABBITMQ_URI="${{ secrets.RABBITMQ_URI }}" \
+              -e RABBITMQ_HOST="${{ secrets.RABBITMQ_HOST }}" \
+              -e RABBITMQ_PORT="${{ secrets.RABBITMQ_PORT }}" \
+              -e RABBITMQ_USER="${{ secrets.RABBITMQ_USER }}" \
+              -e RABBITMQ_PASSWORD="${{ secrets.RABBITMQ_PASSWORD }}" \
+              -e RABBITMQ_QUEUE="${{ secrets.RABBITMQ_QUEUE }}" \
+              -e NEO4J_URI="${{ secrets.NEO4J_URI }}" \
+              -e NEO4J_USER="${{ secrets.NEO4J_USER }}" \
+              -e NEO4J_PASSWORD="${{ secrets.NEO4J_PASSWORD }}" \
+              -e API_KEY="${{ secrets.API_KEY }}" \
+              --restart unless-stopped \
+              ghcr.io/${{ env.REPO_LC }}:latest
+
+            docker image prune -f
