@@ -1,0 +1,194 @@
+{
+  "info": {
+    "name": "Tracker Service - Trazabilidad CDA",
+    "description": "Colección de endpoints de consulta del grafo de trazabilidad. Consume eventos de otros servicios y expone datos relacionados de Clientes, Vehículos y Planillas de inspección.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "x_api_key",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "event": [],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Clientes",
+      "item": [
+        {
+          "name": "GET /api/clientes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/clientes",
+              "host": ["{{base_url}}"],
+              "path": ["api", "clientes"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/clientes/:id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/clientes/{{cliente_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "clientes", "{{cliente_id}}"],
+              "variable": [
+                {
+                  "key": "cliente_id",
+                  "value": "",
+                  "description": "UUID del cliente"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/clientes/:id/vehiculos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/clientes/{{cliente_id}}/vehiculos",
+              "host": ["{{base_url}}"],
+              "path": ["api", "clientes", "{{cliente_id}}", "vehiculos"],
+              "variable": [
+                {
+                  "key": "cliente_id",
+                  "value": "",
+                  "description": "UUID del cliente"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Vehículos",
+      "item": [
+        {
+          "name": "GET /api/vehiculos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/vehiculos",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vehiculos"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/vehiculos/:placa",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/vehiculos/{{placa}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vehiculos", "{{placa}}"],
+              "variable": [
+                {
+                  "key": "placa",
+                  "value": "",
+                  "description": "Placa del vehículo (ej. ABC123)"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/vehiculos/:placa/planillas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/vehiculos/{{placa}}/planillas",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vehiculos", "{{placa}}", "planillas"],
+              "variable": [
+                {
+                  "key": "placa",
+                  "value": "",
+                  "description": "Placa del vehículo"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Planillas",
+      "item": [
+        {
+          "name": "GET /api/planillas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/planillas",
+              "host": ["{{base_url}}"],
+              "path": ["api", "planillas"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/planillas/:id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/planillas/{{planilla_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "planillas", "{{planilla_id}}"],
+              "variable": [
+                {
+                  "key": "planilla_id",
+                  "value": "",
+                  "description": "UUID de la planilla de inspección"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
