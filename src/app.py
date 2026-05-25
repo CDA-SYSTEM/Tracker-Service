@@ -155,7 +155,7 @@ def _iniciar_consumo_rabbitmq(app: Flask) -> None:
         planilla_repo.crear(planilla)
         logger.info("Planilla %s creada en el grafo", planilla.id)
 
-    bindings = {
+    routing_handlers: dict[str, Any] = {
         "cliente.registro.creado": procesar_cliente_registro,
         "vehiculo.registro.creado": procesar_vehiculo_registro,
         "inspeccion.planilla.completada": procesar_planilla_completada,
@@ -168,9 +168,9 @@ def _iniciar_consumo_rabbitmq(app: Flask) -> None:
         exchange_type=EXCHANGE_TYPE,
         durable=True,
     )
-
     channel.queue_declare(queue=queue_name, durable=True)
-    for routing_key in bindings:
+
+    for routing_key in routing_handlers:
         channel.queue_bind(
             queue=queue_name,
             exchange=EXCHANGE_NAME,
@@ -187,12 +187,12 @@ def _iniciar_consumo_rabbitmq(app: Flask) -> None:
             datos = json.loads(body.decode("utf-8"))
             routing_key = _method.routing_key
             logger.info("Evento recibido con routing_key=%s", routing_key)
-            callback = bindings.get(routing_key)
-            if callback is None:
+            handler = routing_handlers.get(routing_key)
+            if handler is None:
                 logger.warning("No hay handler para routing_key=%s", routing_key)
                 _channel.basic_nack(delivery_tag=_method.delivery_tag, requeue=False)
                 return
-            callback(datos)
+            handler(datos)
             _channel.basic_ack(delivery_tag=_method.delivery_tag)
         except Exception:
             logger.exception("Error procesando evento %s", _method.routing_key)
