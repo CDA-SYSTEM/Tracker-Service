@@ -149,7 +149,7 @@ def _iniciar_consumo_rabbitmq(app: Flask) -> None:
         )
         planilla = Planilla(
             id=datos["id"],
-            vehiculo_placa=datos["vehiculo_placa"],
+            vehiculo_placa=datos["plate"],
             defectos=defectos,
         )
         planilla_repo.crear(planilla)
