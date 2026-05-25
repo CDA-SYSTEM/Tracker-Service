@@ -155,11 +155,11 @@ def _iniciar_consumo_rabbitmq(app: Flask) -> None:
         planilla_repo.crear(planilla)
         logger.info("Planilla %s creada en el grafo", planilla.id)
 
-    bindings = [
-        ("cliente.registro.creado", procesar_cliente_registro),
-        ("vehiculo.registro.creado", procesar_vehiculo_registro),
-        ("inspeccion.planilla.completada", procesar_planilla_completada),
-    ]
+    bindings = {
+        "cliente.registro.creado": procesar_cliente_registro,
+        "vehiculo.registro.creado": procesar_vehiculo_registro,
+        "inspeccion.planilla.completada": procesar_planilla_completada,
+    }
 
     connection = pika.BlockingConnection(connection_params)
     channel = connection.channel()
@@ -169,37 +169,42 @@ def _iniciar_consumo_rabbitmq(app: Flask) -> None:
         durable=True,
     )
 
-    for routing_key, callback in bindings:
-        channel.queue_declare(queue=queue_name, durable=True)
+    channel.queue_declare(queue=queue_name, durable=True)
+    for routing_key in bindings:
         channel.queue_bind(
             queue=queue_name,
             exchange=EXCHANGE_NAME,
             routing_key=routing_key,
         )
 
-        def _wrapper(
-            _channel: Any,
-            _method: Any,
-            _properties: Any,
-            body: bytes,
-            cb=callback,
-        ) -> None:
-            try:
-                datos = json.loads(body.decode("utf-8"))
-                logger.info("Evento recibido con routing_key=%s", routing_key)
-                cb(datos)
-                _channel.basic_ack(delivery_tag=_method.delivery_tag)
-            except Exception:
-                logger.exception("Error procesando evento %s", routing_key)
-                _channel.basic_nack(
-                    delivery_tag=_method.delivery_tag,
-                    requeue=False,
-                )
+    def on_message(
+        _channel: Any,
+        _method: Any,
+        _properties: Any,
+        body: bytes,
+    ) -> None:
+        try:
+            datos = json.loads(body.decode("utf-8"))
+            routing_key = _method.routing_key
+            logger.info("Evento recibido con routing_key=%s", routing_key)
+            callback = bindings.get(routing_key)
+            if callback is None:
+                logger.warning("No hay handler para routing_key=%s", routing_key)
+                _channel.basic_nack(delivery_tag=_method.delivery_tag, requeue=False)
+                return
+            callback(datos)
+            _channel.basic_ack(delivery_tag=_method.delivery_tag)
+        except Exception:
+            logger.exception("Error procesando evento %s", _method.routing_key)
+            _channel.basic_nack(
+                delivery_tag=_method.delivery_tag,
+                requeue=False,
+            )
 
-        channel.basic_consume(
-            queue=queue_name,
-            on_message_callback=_wrapper,
-        )
+    channel.basic_consume(
+        queue=queue_name,
+        on_message_callback=on_message,
+    )
 
     logger.info("Iniciando consumo de eventos en %s ...", queue_name)
     channel.start_consuming()
