@@ -13,18 +13,28 @@ class Neo4jPlanillaRepository(PlanillaRepository):
     def crear(self, planilla: Planilla) -> None:
         query = """
             MATCH (v:Vehiculo {placa: $placa})
-            CREATE (p:Planilla {id: $id})
+            CREATE (p:Planilla {id: $id, fecha: $fecha})
             CREATE (v)-[:TIENE_INSPECCION]->(p)
             WITH p
             UNWIND $defectos AS d
-            CREATE (def:Defecto {codigo_ntc5375: d.codigo})
+            CREATE (def:Defecto {
+                codigo_ntc5375: d.codigo,
+                defect_type: d.tipo,
+                observacion: d.obs
+            })
             CREATE (p)-[:PRESENTA_DEFECTO]->(def)
         """
         params = {
             "id": planilla.id,
             "placa": planilla.vehiculo_placa,
+            "fecha": planilla.fecha,
             "defectos": [
-                {"codigo": d.codigo_ntc5375} for d in planilla.defectos
+                {
+                    "codigo": d.codigo_ntc5375,
+                    "tipo": d.defect_type,
+                    "obs": d.observacion,
+                }
+                for d in planilla.defectos
             ],
         }
         with self._driver.session() as session:
@@ -47,7 +57,9 @@ class Neo4jPlanillaRepository(PlanillaRepository):
         query = """
             MATCH (p:Planilla {id: $id})
             OPTIONAL MATCH (v:Vehiculo)-[:TIENE_INSPECCION]->(p)
-            RETURN p.id AS id, v.placa AS vehiculo_placa
+            RETURN p.id AS id,
+                   v.placa AS vehiculo_placa,
+                   p.fecha AS fecha
         """
         params = {"id": planilla_id}
         with self._driver.session() as session:
@@ -57,13 +69,14 @@ class Neo4jPlanillaRepository(PlanillaRepository):
         return Planilla(
             id=result["id"],
             vehiculo_placa=result["vehiculo_placa"] or "",
+            fecha=result.get("fecha", "") or "",
         )
 
     def listar(self) -> list[Planilla]:
         query = """
             MATCH (p:Planilla)
             OPTIONAL MATCH (v:Vehiculo)-[:TIENE_INSPECCION]->(p)
-            RETURN p.id AS id, v.placa AS vehiculo_placa
+            RETURN p.id AS id, v.placa AS vehiculo_placa, p.fecha AS fecha
             ORDER BY p.id
         """
         with self._driver.session() as session:
@@ -72,6 +85,7 @@ class Neo4jPlanillaRepository(PlanillaRepository):
                 Planilla(
                     id=record["id"],
                     vehiculo_placa=record["vehiculo_placa"] or "",
+                    fecha=record.get("fecha", "") or "",
                 )
                 for record in results
             ]
@@ -79,7 +93,7 @@ class Neo4jPlanillaRepository(PlanillaRepository):
     def obtener_por_vehiculo(self, placa: str) -> list[Planilla]:
         query = """
             MATCH (v:Vehiculo {placa: $placa})-[:TIENE_INSPECCION]->(p:Planilla)
-            RETURN p.id AS id, v.placa AS vehiculo_placa
+            RETURN p.id AS id, v.placa AS vehiculo_placa, p.fecha AS fecha
             ORDER BY p.id
         """
         params = {"placa": placa}
@@ -89,6 +103,7 @@ class Neo4jPlanillaRepository(PlanillaRepository):
                 Planilla(
                     id=record["id"],
                     vehiculo_placa=record["vehiculo_placa"],
+                    fecha=record.get("fecha", "") or "",
                 )
                 for record in results
             ]
@@ -96,13 +111,19 @@ class Neo4jPlanillaRepository(PlanillaRepository):
     def obtener_defectos(self, planilla_id: str) -> list[Defecto]:
         query = """
             MATCH (p:Planilla {id: $id})-[:PRESENTA_DEFECTO]->(d:Defecto)
-            RETURN d.codigo_ntc5375 AS codigo_ntc5375
+            RETURN d.codigo_ntc5375 AS codigo_ntc5375,
+                   d.defect_type AS defect_type,
+                   d.observacion AS observacion
             ORDER BY d.codigo_ntc5375
         """
         params = {"id": planilla_id}
         with self._driver.session() as session:
             results = session.run(query, params)
             return [
-                Defecto(codigo_ntc5375=record["codigo_ntc5375"])
+                Defecto(
+                    codigo_ntc5375=record["codigo_ntc5375"],
+                    defect_type=record.get("defect_type", "") or "",
+                    observacion=record.get("observacion", "") or "",
+                )
                 for record in results
             ]

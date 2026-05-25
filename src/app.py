@@ -144,16 +144,26 @@ def _iniciar_consumo_rabbitmq(app: Flask) -> None:
         from src.domain.models.planilla import Planilla
 
         defectos = tuple(
-            Defecto(codigo_ntc5375=d["codigo_ntc5375"])
-            for d in datos.get("defectos", [])
+            Defecto(
+                codigo_ntc5375=r["item_code"],
+                defect_type=r.get("defect_type", ""),
+                observacion=r.get("observation", ""),
+            )
+            for r in datos.get("responses", [])
+            if r.get("response") == "FALLA"
         )
         planilla = Planilla(
             id=datos["id"],
             vehiculo_placa=datos["plate"],
+            fecha=datos.get("inspection_datetime", ""),
             defectos=defectos,
         )
         planilla_repo.crear(planilla)
-        logger.info("Planilla %s creada en el grafo", planilla.id)
+        logger.info(
+            "Planilla %s creada en el grafo con %d defectos",
+            planilla.id,
+            len(defectos),
+        )
 
     routing_handlers: dict[str, Any] = {
         "cliente.registro.creado": procesar_cliente_registro,

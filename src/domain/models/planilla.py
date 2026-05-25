@@ -6,4 +6,5 @@ from src.domain.models.defecto import Defecto
 class Planilla:
     id: str
     vehiculo_placa: str
+    fecha: str = ""
     defectos: tuple[Defecto, ...] = field(default_factory=tuple)

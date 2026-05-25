@@ -232,5 +232,13 @@ def obtener_planilla(planilla_id: str):
     return jsonify({
         "id": planilla.id,
         "vehiculo_placa": planilla.vehiculo_placa,
-        "defectos": [d.codigo_ntc5375 for d in defectos],
+        "fecha": planilla.fecha,
+        "defectos": [
+            {
+                "codigo_ntc5375": d.codigo_ntc5375,
+                "tipo": d.defect_type,
+                "observacion": d.observacion,
+            }
+            for d in defectos
+        ],
     }), 200
